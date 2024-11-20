@@ -1,16 +1,21 @@
-# This is a sample Python script.
+import sys
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import bs4
 
+from scrapper import Scrapper
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    if len(sys.argv) != 2:
+        print("You need to specify single path argument")
+        exit(1)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    url = sys.argv[1]
+    soup = bs4.BeautifulSoup(html_content, 'html.parser')
+    scrapper = Scrapper(url)
+    scrapper.get_destinations()
+    scrapper.get_offers()
+    scrapper.get_trips()
+
+
+
+
