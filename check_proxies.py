@@ -10,7 +10,7 @@ q = queue.Queue()
 valid_proxies = []
 URL = "https://ipinfo.io/json"
 
-with open("proxies_list.txt", "r") as f:
+with open("Proxies/proxies_list.txt", "r") as f:
     proxies = f.read().split("\n")
     for p in proxies:
         q.put(p)
