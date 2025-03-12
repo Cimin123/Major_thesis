@@ -10,9 +10,18 @@ from urllib.parse import urljoin
 # Google Scholar scraper
 class Scraper:
     BASE_URL = "https://scholar.google.com/scholar"
-    HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
+    HEADERS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.2420.81",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 OPR/109.0.0.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:124.0) Gecko/20100101 Firefox/124.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 OPR/109.0.0.0",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux i686; rv:124.0) Gecko/20100101 Firefox/124.0"
+    ]
 
     def __init__(self, query, max_pubs=20, proxies_file=None, output_folder="PDFDownloads",
                  csv_filename="publication_links.csv"):
@@ -43,7 +52,7 @@ class Scraper:
         if not self.proxies:
             return None
         proxy = random.choice(self.proxies)
-        return {"http": proxy, "https": proxy}
+        return {"http": proxy, "https": proxy, "socks4": proxy}
 
     # Get all publications from given page
     def get_publication_links(self):
@@ -56,7 +65,8 @@ class Scraper:
 
             try:
                 proxy = self.get_random_proxy()
-                response = requests.get(self.BASE_URL, headers=self.HEADERS, params=params, proxies=proxy, timeout=10)
+                header_agent = {"User-Agent": random.choice(self.HEADERS)}
+                response = requests.get(self.BASE_URL, headers=header_agent, params=params, proxies=proxy, timeout=10)
 
                 if response.status_code != 200:
                     logging.error(f"Failed to retrieve page {page + 1}. Status Code: {response.status_code}")

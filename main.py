@@ -30,13 +30,13 @@ def load_categories(input_csv, category_col):
         logging.error(f"Error loading CSV: {e}")
         return []
 
-
+# python main.py "https://scholar.google.com/scholar?hl=pl&as_sdt=0%2C5&q=radiologia&btnG=" "20" "valid_proxies.txt"
 def main():
     parser = argparse.ArgumentParser(description="Google Scholar Scraper")
 
     parser.add_argument("query", type=str, help="Search query for Google Scholar")
-    parser.add_argument("input_csv", type=str, help="Path to input CSV file with categories")
-    parser.add_argument("category_col", type=str, help="Column name containing categories to filter")
+    #parser.add_argument("input_csv", type=str, help="Path to input CSV file with categories")
+    #parser.add_argument("category_col", type=str, help="Column name containing categories to filter")
     parser.add_argument("max_pages", type=int, help="Number of pages to scrape")
     parser.add_argument("proxy_file", type=str, help="Path to proxy file")
 
@@ -44,21 +44,21 @@ def main():
 
     # Load proxies and filtered data
     proxies = load_proxies(args.proxy_file)
-    filtered_data = load_categories(args.input_csv, args.category_col)
+    #filtered_data = load_categories(args.input_csv, args.category_col)
 
-    if filtered_data.empty:
-        logging.error("No data found for the specified category.")
-        return
+    # if filtered_data.empty:
+    #     logging.error("No data found for the specified category.")
+    #     return
 
     # Start the scraper
     scraper = Scraper(
         query=args.query,
-        max_pubs=len(filtered_data),
-        max_pages=args.max_pages
+        max_pubs=100,
+        proxies_file=args.proxy_file
     )
 
     if proxies:
-        scraper.PROXIES = proxies  # Override default proxies
+        scraper.PROXIES = proxies
 
     publication_links = scraper.get_publication_links()
     scraper.save_links_to_csv(publication_links)
