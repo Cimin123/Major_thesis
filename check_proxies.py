@@ -7,6 +7,7 @@ import random
 import requests
 
 
+
 def load_proxies(file_path, low_thresh=None, high_thresh=None):
     with open(file_path, "r") as f:
         proxies = f.read().splitlines()
@@ -35,10 +36,10 @@ def check_proxies():
         proxy = q.get()
 
         header_agent = {"User-Agent": random.choice(user_agents)}
-        proxy_dict = {"http": proxy, "https": proxy, "socks4": proxy}
+        proxy_dict = {"http": proxy, "https": proxy}#, "socks4": proxy}
 
         try:
-            res = requests.get(URL, proxies=proxy_dict, headers=header_agent, timeout=10, verify=False)
+            res = requests.get(URL, proxies=proxy_dict, headers=header_agent, timeout=10)
 
         except Exception as e:
             #print(f" {e}\n")
@@ -54,7 +55,9 @@ def check_proxies():
         q.task_done()
         random_delay()
 
-proxies_file = "Proxies/proxies_list_2.txt"
+
+proxy_source = "https://proxyscrape.com/free-proxy-list"
+proxies_file = "Proxies/proxies_list_4.txt"
 URL = "https://scholar.google.com/"
 
 active_threads = os.cpu_count()
@@ -64,7 +67,7 @@ q = queue.Queue()
 valid_proxies = []
 threads = []
 proxy_start = 0
-proxy_limit = 150
+proxy_limit = 1000
 user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",

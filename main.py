@@ -30,10 +30,11 @@ def load_categories(input_csv, category_col):
         logging.error(f"Error loading CSV: {e}")
         return []
 
-# python main.py "https://scholar.google.com/scholar?hl=pl&as_sdt=0%2C5&q=radiologia&btnG=" "20" "valid_proxies.txt"
+# python main.py "https://scholar.google.com/scholar?hl=pl&as_sdt=0%2C5&q=radiologia&btnG=" "Radiologia" "20" "valid_proxies.txt"
 def main():
     parser = argparse.ArgumentParser(description="Google Scholar Scraper")
 
+    parser.add_argument("url", type=str, default="https://scholar.google.com/scholar", help="Search url for Google Scholar")
     parser.add_argument("query", type=str, help="Search query for Google Scholar")
     #parser.add_argument("input_csv", type=str, help="Path to input CSV file with categories")
     #parser.add_argument("category_col", type=str, help="Column name containing categories to filter")
@@ -52,8 +53,9 @@ def main():
 
     # Start the scraper
     scraper = Scraper(
+        url=args.url,
         query=args.query,
-        max_pubs=100,
+        max_pubs=30,
         proxies_file=args.proxy_file
     )
 
