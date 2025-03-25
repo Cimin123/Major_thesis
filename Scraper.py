@@ -2,6 +2,7 @@ import os
 import csv
 import logging
 import requests
+import re
 import random
 import time
 from bs4 import BeautifulSoup
@@ -11,7 +12,6 @@ from urllib.parse import urljoin
 
 # Google Scholar scraper
 class Scraper:
-    BASE_URL = "https://scholar.google.com/scholar"
     HEADERS = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
@@ -47,12 +47,12 @@ class Scraper:
     def load_proxies(proxies_file):
         try:
             with open(proxies_file, "r") as f:
-                proxies = [line.strip() for line in f.readlines()]
+                proxies = {line.strip(): True for line in f.readlines()}
             logging.info(f"Loaded {len(proxies)} proxies.")
             return proxies
         except Exception as e:
             logging.error(f"Error loading proxies: {e}")
-            return []
+            return {}
 
     # Add random delay
     @staticmethod
@@ -64,8 +64,15 @@ class Scraper:
     def get_random_proxy(self):
         if not self.proxies:
             return None
-        proxy = random.choice(self.proxies)
-        return {"http": proxy, "https": proxy} #, "socks4": proxy}
+
+        # Filter for valid proxies
+        valid_proxies = [proxy for proxy, is_valid in self.proxies.items() if is_valid]
+
+        proxy = random.choice(valid_proxies)
+        return proxy
+
+    def out_of_proxy(self):
+        return not any(is_valid for is_valid in self.proxies.values())
 
     # Get all publications from given page
     def get_publication_links(self):
@@ -73,42 +80,49 @@ class Scraper:
         links = []
 
         for page in range(self.max_pages):
+            page_scrapped = False
             start = page * self.pubs_per_page  # Each Scholar page contains 10 results
             params = {"as_vs": 1, "hl": "pl", "q": self.query, "as_sdt": "0%2C5", "start": start}
-            proxy = self.get_random_proxy()
 
-            try:
-                header_agent = {"User-Agent": random.choice(self.HEADERS)}
-                full_url = requests.Request("GET", self.url, params=params).prepare().url
-                #self.session.proxies.update(proxy)
-                print(f'Proxy: {proxy} header {header_agent} url {full_url}')
-                #response = requests.get(self.BASE_URL, headers=header_agent, params=params, proxies=proxy, timeout=10)
-                # session approach
-                response = self.session.get(self.BASE_URL, headers=header_agent, params=params, #proxies=proxy,
-                                            timeout=10)
+            # Look for working proxy until page is scrapped
+            while not page_scrapped and self.out_of_proxy():
+                try:
+                    proxy = self.get_random_proxy()
+                    header_agent = {"User-Agent": random.choice(self.HEADERS)}
 
-                if response.status_code != 200:
-                    logging.error(f"Failed to retrieve page {page + 1}. Status Code: {response.status_code}")
-                    continue
+                    full_url = requests.Request("GET", self.url, params=params).prepare().url
+                    print(f'Proxy: {proxy} header {header_agent} url {full_url}')
+                    response = requests.get(self.url, headers=header_agent, params=params, proxies=proxy, timeout=10)
 
-                soup = BeautifulSoup(response.text, "html.parser")
+                    if response.status_code != 200:
+                        print(f"Failed to retrieve page {page + 1}. Status Code: {response.status_code}")
+                        self.proxies[proxy] = False
 
-                for entry in soup.select('.gs_or_ggsm a[href]'):
-                    href = entry['href']
-                    if "scholar.google.com" in href:  # Ignore internal Google Scholar links
                         continue
 
-                    full_url = urljoin(self.BASE_URL, href)
-                    links.append(full_url)
+                    else:
+                        print(f'Proxy: {proxy} is working correctly!. Page {page} scraped')
 
-                    if len(links) >= self.max_pubs:
-                        logging.info(f"Reached max publications: {len(links)}")
-                        return links
+                    soup = BeautifulSoup(response.text, "html.parser")
 
-            except requests.RequestException as e:
-                logging.error(f"Error fetching Google Scholar results: {e}")
+                    for entry in soup.select('.gs_or_ggsm a[href]'):
+                        href = entry['href']
+                        if "scholar.google.com" in href:  # Ignore internal Google Scholar links
+                            continue
 
-            self.random_delay()
+                        full_url = urljoin(self.url, href)
+                        links.append(full_url)
+
+                        if len(links) >= self.max_pubs:
+                            logging.info(f"Reached max publications: {len(links)}")
+                            return links
+
+                    page_scrapped = True
+
+                except requests.RequestException as e:
+                    logging.error(f"Error fetching Google Scholar results: {e}")
+
+                self.random_delay()
 
         logging.info(f"Total links found: {len(links)}")
         print(links, sep="\n")
@@ -117,7 +131,7 @@ class Scraper:
     # Save scrapped links to csv
     def save_links_to_csv(self, links):
         logging.info(f"Saving {len(links)} links to {self.csv_filename}...")
-        with open(self.csv_filename, mode="w", newline="", encoding="utf-8") as file:
+        with open(self.csv_filename, mode="a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerow(["Publication URL"])
             for link in links:
@@ -146,15 +160,29 @@ class Scraper:
             except requests.RequestException as e:
                 logging.error(f"Error accessing {link}: {e}")
 
+    @staticmethod
+    def sanitize_filename(url):
+        # Get the last part of the path or fallback to full base64
+        filename = url.split("/")[-1].split("?")[0]
+        if not filename.endswith(".pdf"):
+            filename += ".pdf"
+
+        # Remove or replace characters invalid in filenames
+        filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+        return filename
+
     # Function for downloading PDFs
     def download_pdf(self, pdf_url):
-        filename = os.path.join(self.output_folder, pdf_url.split("/")[-1])
+        filename = self.sanitize_filename(pdf_url)
+        filepath = os.path.join(self.output_folder, filename)
+        header_agent = {"User-Agent": random.choice(self.HEADERS)}
 
         try:
-            response = requests.get(pdf_url, headers=self.HEADERS, timeout=10)
+            response = requests.get(pdf_url, headers=header_agent, timeout=10)
             response.raise_for_status()
-            with open(filename, "wb") as file:
+            with open(filepath, "wb") as file:
                 file.write(response.content)
             logging.info(f"Downloaded: {filename}")
+
         except requests.RequestException as e:
             logging.error(f"Failed to download {pdf_url}: {e}")

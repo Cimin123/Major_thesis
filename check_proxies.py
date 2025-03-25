@@ -20,7 +20,7 @@ def load_proxies(file_path, low_thresh=None, high_thresh=None):
 
 
 def save_list(valid_proxies_list, file="valid_proxies.txt"):
-    with open(file, 'a') as f:
+    with open(file, 'w') as f:
         for line in valid_proxies_list:
             f.write(f"{line}\n")
 
@@ -57,7 +57,7 @@ def check_proxies():
 
 
 proxy_source = "https://proxyscrape.com/free-proxy-list"
-proxies_file = "Proxies/proxies_list_4.txt"
+proxies_file = "Proxies/proxies_list_5.txt"
 URL = "https://scholar.google.com/"
 
 active_threads = os.cpu_count()

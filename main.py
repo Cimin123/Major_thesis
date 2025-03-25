@@ -1,6 +1,8 @@
 import argparse
 import logging
 import pandas as pd
+import requests
+import os
 from Scraper import Scraper
 
 
@@ -30,14 +32,12 @@ def load_categories(input_csv, category_col):
         logging.error(f"Error loading CSV: {e}")
         return []
 
-# python main.py "https://scholar.google.com/scholar?hl=pl&as_sdt=0%2C5&q=radiologia&btnG=" "Radiologia" "20" "valid_proxies.txt"
+# python main.py "https://scholar.google.com/scholar" "Radiologia" "20" "valid_proxies.txt"
 def main():
     parser = argparse.ArgumentParser(description="Google Scholar Scraper")
 
     parser.add_argument("url", type=str, default="https://scholar.google.com/scholar", help="Search url for Google Scholar")
     parser.add_argument("query", type=str, help="Search query for Google Scholar")
-    #parser.add_argument("input_csv", type=str, help="Path to input CSV file with categories")
-    #parser.add_argument("category_col", type=str, help="Column name containing categories to filter")
     parser.add_argument("max_pages", type=int, help="Number of pages to scrape")
     parser.add_argument("proxy_file", type=str, help="Path to proxy file")
 
@@ -55,7 +55,7 @@ def main():
     scraper = Scraper(
         url=args.url,
         query=args.query,
-        max_pubs=30,
+        max_pubs=2000,
         proxies_file=args.proxy_file
     )
 
@@ -65,12 +65,16 @@ def main():
     publication_links = scraper.get_publication_links()
     scraper.save_links_to_csv(publication_links)
 
+    with open("publication_links.csv", "r") as f:
+        publication_links = f.read().splitlines()[1:]
+
     # Download PDFs
     for link in publication_links:
         try:
+            print(link, sep='\n')
             scraper.download_pdf(link)
         except Exception as e:
-            logging.error(f"Couldn't download {link}: {e}")
+            print(f"Couldn't download {link}: {e}")
 
 
 if __name__ == "__main__":
